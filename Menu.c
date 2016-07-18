@@ -18,7 +18,7 @@
 #include "Menu.h"
 #include "Led.h"
 #include "Com.h"
-
+#include "Moto.h"
 
 typedef struct DataNode
 {
@@ -64,10 +64,24 @@ u8 MenuGetMode(void) {
 ************************************************************************************************************/ 
 void MenuModeSet(u8 cmd) { 
     switch( cmd ) {
-        case 11://模式按键
-          
+        case 0x01:
+            MotoSetppingSet(1,0,1);
         break;
+        case 0x02:
+            MotoSetppingSet(0,0,1);
+        break;
+        case 0x11:
+            MotoSetppingSet(1,1,1);
+        break;
+        case 0x12:
+            MotoSetppingSet(0,1,1);
+        break;
+        case 0x21://切纸电机
+            MotoSet(0,10,1);
+        break;
+        case 0x22:
         
+        break;
         default:
         break;
     }

@@ -18,13 +18,21 @@
 #include "Sys.h"
 #include "Moto.h"
 #include "Com.h"
+#include "buntu.h"
+#include "Menu.h"
+#include "Eeprom.h"
 
 int main( void ) {
     SysInit();
+    EeepromInit();
     MotoInit();
     ComInit();
+    BuntuInit();
+    MenuInit();
     INTEN
     while(1) {
-    
+        MenuModeSet(BuntuRead());
+        //电机服务函数
+        MotoServer();
     }
 }
