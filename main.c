@@ -29,10 +29,13 @@ int main( void ) {
     ComInit();
     BuntuInit();
     MenuInit();
+    MotoSteppingSetp(0,1);//上电复位
     INTEN
     while(1) {
         MenuModeSet(BuntuRead());
         //电机服务函数
         MotoServer();
+        //通讯服务函数
+        MenuAsk();
     }
 }

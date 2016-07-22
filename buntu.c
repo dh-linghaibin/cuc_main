@@ -73,6 +73,8 @@ u8 BuntuRead(void) {
     static u16 but_out_pa = 0;
     static u16 but_in_pa = 0;
     static u16 but_cutter = 0;
+    static u16 but_platen_in = 0;
+    static u16 but_platen_out = 0;
     if(BUT_OUT_PA == 0) {//³öÖ½¿ª¹Ø
         if(but_out_pa < 6000) {
             but_out_pa++;
@@ -112,20 +114,50 @@ u8 BuntuRead(void) {
                 }
             }
         } else {
-            but_cutter = 0;
             if(but_cutter > 5999) {
                 but_cutter = 0;
                 return 0x22;
             }
+            but_cutter = 0;
         }
     } else {
-        but_cutter = 0;
         if(but_cutter > 5999) {
             but_cutter = 0;
             return 0x22;
         }
+        but_cutter = 0;
     }
     
+    if(BUT_PLATEN_IN == 0) {
+        if(but_platen_in < 6000) {
+            but_platen_in++;
+            if(but_platen_in == 5999) {
+                return 0x31;
+            }
+        }
+    } else {
+        if(but_platen_in > 5999) {
+            but_platen_in = 0;
+            return 0x32;
+        }
+        but_platen_in = 0;
+    }
+    
+    if(BUT_PLATEN_OUT == 0) {
+        if(but_platen_out < 6000) {
+            but_platen_out++;
+            if(but_platen_out == 5999) {
+                return 0x41;
+            }
+        }
+    } else {
+        if(but_platen_out > 5999) {
+            but_platen_out = 0;
+            return 0x42;
+        }
+        but_platen_out = 0;
+    }
+        
     return 0x00;
 }
 
