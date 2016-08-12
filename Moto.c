@@ -41,6 +41,8 @@
 
 #define CUTTER_LIGHT    PC_ODR_ODR3 //刀光线使能
 
+#define SAFETY_LIGHT    PB_IDR_IDR5 //安全光幕
+
 /*电机参数*/
 moto moto1;//压纸电机
 moto moto2;//切纸电机
@@ -91,7 +93,7 @@ void MotoInit(void) {
     
     PB_DDR_DDR2 = 0;//压纸霍尔
     PB_CR1_C12 = 0;
-    PB_CR2_C22 = 0;
+    PB_CR2_C22 = 1;
     
     PB_DDR_DDR1 = 0;//压纸上限位
     PB_CR1_C11 = 0;
@@ -119,6 +121,10 @@ void MotoInit(void) {
     PC_CR1_C13 = 1;
     PC_CR2_C23 = 1;
     
+    PB_DDR_DDR5 = 0;//安全光幕
+    PB_CR1_C15 = 0;
+    PB_CR2_C25 = 0;
+    
     CUTTER_SLEEP = 1;
     PLATEN_SLEEP = 1;
     
@@ -130,17 +136,24 @@ void MotoInit(void) {
 	TIM1_IER = 0X01;
 	TIM1_CR1 = 0X01;
     
+    CUTTER_LIGHT = 1;//打开激光指示
+    
+    EXTI_CR1 &= ~BIT(2);//开启PD口中断 1 0
+	EXTI_CR1 |= BIT(3);
+    
     stepping1.step = EepromRead(10);
     stepping1.step |= (u16)(EepromRead(11) << 8);
     
     //电机参数初始化
-    moto1.sleep_set_group = 4;
+    moto1.sleep_set_group = 8;//4
     moto1.sleep_set = moto1.sleep_set_group*10;
     moto1.sleep = moto1.sleep_set;
     
-    moto2.sleep_set_group = 4;
+    moto2.sleep_set_group = 8;//4
     moto2.sleep_set = moto2.sleep_set_group*10;
     moto2.sleep = moto1.sleep_set;
+    
+    stepping1.start_zero = 0;//第一次开机
 }
 /**********************************************函数定义***************************************************** 
 * 函数名称: static void MotoSaveStep(void) 
@@ -153,6 +166,36 @@ void MotoInit(void) {
 static void MotoSaveStep(void) { 
     EepromWrite(10,(u8)(stepping1.step));
     EepromWrite(11,(u8)(stepping1.step >> 8));
+}
+/**********************************************函数定义***************************************************** 
+* 函数名称: void MotoOff(u8 moto) 
+* 输入参数: u8 moto 
+* 返回参数: void  
+* 功    能:   
+* 作    者: by lhb_steven
+* 日    期: 2016/7/18
+************************************************************************************************************/ 
+void MotoOff(u8 moto) { 
+    if(moto == 0) {
+        //关闭电机
+        moto1.en = 0;
+        PLATEN_SLEEP = 1;
+        moto1.down_time = 0;
+        moto1.up_time = 0;
+        //别忘了关闭继电器
+        POWER_EN = 0;//关闭电源
+        DelayMs(500);
+        PLATEN_DIR = 0;//释放方向继电器
+    } else {
+        moto2.en = 0;
+        CUTTER_SLEEP = 1;
+        moto2.down_time = 0;
+        moto2.up_time = 0;
+        //别忘了关闭继电器
+        POWER_EN = 0;//关闭电源
+        DelayMs(500);
+        CUTTER_DIR = 0;//释放方向继电器
+    }
 }
 /**********************************************函数定义***************************************************** 
 * 函数名称: void MotoSet(u8 moto, u8 sleep) 
@@ -168,24 +211,28 @@ u8 MotoSet(u8 moto, u8 sleep, u8 dir) {
             return 0x00;
         }
         if(moto1.en == 1) {//在打开的情况下不能切换
-            //关闭电机
-            moto1.en = 0;
-            //别忘了关闭继电器
-            POWER_EN = 0;//关闭电源
-            DelayMs(500);
-            PLATEN_DIR = 0;//释放方向继电器
+//            //关闭电机
+//            moto1.en = 0;
+//            PLATEN_SLEEP = 1;
+//            //别忘了关闭继电器
+//            POWER_EN = 0;//关闭电源
+//            DelayMs(500);
+//            PLATEN_DIR = 0;//释放方向继电器
+            MotoOff(0);
             return 0x00;
         }
         CUTTER_SLEEP = 1;
         PLATEN_SLEEP = 1;
         moto1.en = 1;//打开压纸电机
         if(dir == 0) {
-            moto1.dir = 0;
+            moto1.dir = ste_dr_cut_counter;
+            moto1.down_time = 0;
             if(PLATEN_UP == 0) {
                 return 0;
             }
         } else {
-            moto1.dir = 1;
+            moto1.dir = ste_dr_cut_positive;
+            moto1.up_time = 0;
         }
         //压纸电机方向
         PLATEN_DIR = moto1.dir;
@@ -194,23 +241,27 @@ u8 MotoSet(u8 moto, u8 sleep, u8 dir) {
             return 0x00;
         }
         if(moto2.en == 1) {//在打开的情况下不能切换
-             moto2.en = 0;
-            //别忘了关闭继电器
-            POWER_EN = 0;//关闭电源
-            DelayMs(500);
-            CUTTER_DIR = 0;//释放方向继电器
+//            moto2.en = 0;
+//            CUTTER_SLEEP = 1;
+//            //别忘了关闭继电器
+//            POWER_EN = 0;//关闭电源
+//            DelayMs(500);
+//            CUTTER_DIR = 0;//释放方向继电器
+            MotoOff(1);
             return 0x00;
         }
         PLATEN_SLEEP = 1;
         CUTTER_SLEEP = 1;
         moto2.en = 1;//打开切纸电机
         if(dir == 0) {
-            moto2.dir = 0;
+            moto2.dir = ste_dr_pla_counter;
+            moto2.down_time = 0;
             if(CUTTER_UP == 0) {
-                return 0;
+               // return 0;
             }
         } else {
-            moto2.dir = 1;
+            moto2.dir = ste_dr_pla_positive;
+            moto2.up_time = 0;
             if(CUTTER_DOWN == 0) {
                 return 0;
             }
@@ -225,30 +276,6 @@ u8 MotoSet(u8 moto, u8 sleep, u8 dir) {
     //使能电源
     POWER_EN = 1;
     return 0;
-}
-/**********************************************函数定义***************************************************** 
-* 函数名称: void MotoOff(u8 moto) 
-* 输入参数: u8 moto 
-* 返回参数: void  
-* 功    能:   
-* 作    者: by lhb_steven
-* 日    期: 2016/7/18
-************************************************************************************************************/ 
-void MotoOff(u8 moto) { 
-    if(moto == 0) {
-        //关闭电机
-        moto1.en = 0;
-        //别忘了关闭继电器
-        POWER_EN = 0;//关闭电源
-        DelayMs(500);
-        PLATEN_DIR = 0;//释放方向继电器
-    } else {
-        moto2.en = 0;
-        //别忘了关闭继电器
-        POWER_EN = 0;//关闭电源
-        DelayMs(500);
-        CUTTER_DIR = 0;//释放方向继电器
-    }
 }
 /**********************************************函数定义***************************************************** 
 * 函数名称: void MotoSetppingSet(u8 en, u8 dr,u8 set) 
@@ -323,6 +350,17 @@ void MotoSteppingSetp(u8 mode, u16 arrive) {
 * 日    期: 2016/7/15
 ************************************************************************************************************/ 
 void MotoServer(void) {
+    //安全光幕保护
+    if(SAFETY_LIGHT == 0) {
+        if(moto1.en == 1) {
+            //关闭电机
+            MotoOff(0);
+        }
+        if(moto2.en == 1) {
+            //关闭电机
+            MotoOff(1);
+        }
+    }
     //电机打开
     if(stepping1.en == 1) {
         //电机方向正传
@@ -332,22 +370,40 @@ void MotoServer(void) {
                 stepping1.en = 0;//关闭电机
                 stepping1.step = 0;//回到零点
                 MotoSaveStep();//保存
+                //第一次走完 需要回到位置
+                //推书完成，走到位置
+                if(stepping1.start_zero == 0) {
+                    stepping1.start_zero = 1;//只有在开机的时候走一次
+                    MotoSteppingSetp(2,MenuGetArrive());
+                }
             }
         }
     }
     //压纸电机以打开
     if(moto1.en == 1) {
-        if(moto1.dir == 0) {
+        if(moto1.dir == ste_dr_cut_counter) {
             //压纸电机保护
-            
+#if MOTO_PRP == 1
+            if(moto1.down_time < std_cut_down_pro_time) {
+                static u8 cut_up_count = 0;
+                if(cut_up_count < 10) {
+                    cut_up_count++;
+                } else {
+                    cut_up_count = 0;
+                    moto1.down_time++;
+                }
+            } else {
+                moto1.up_time = 0;
+                //关闭电机
+                MotoOff(0);
+                //发送错误
+                
+            }
+#endif
             //到位置了
             if(PLATEN_UP == 0) {
                 //关闭电机
-                moto1.en = 0;
-                //别忘了关闭继电器
-                POWER_EN = 0;//关闭电源
-                DelayMs(500);
-                PLATEN_DIR = 0;//释放方向继电器
+                MotoOff(0);
                 //自动程序
                 if(autu_flag == 8) {
                     autu_flag = 9;
@@ -358,61 +414,168 @@ void MotoServer(void) {
                 }
             }
         } else {
-            static u16 hd_count = 0;
-            if(PLATEN_HD == 1) {
-                if(hd_count < 3000) {
-                    hd_count++;
+            static u16 hd_count1 = 0;
+            if(moto1.yazhi_jb > 1) {
+                moto1.yazhi_jb = 0;
+                hd_count1 = 0;
+            } else {
+                PB_CR2_C22 = 1;
+                if(hd_count1 < 4000) {
+                    hd_count1++;
                 } else {
-                    hd_count = 0;
-                    //压倒纸了关闭电机
-                    moto1.en = 0;
-                    //别忘了关闭继电器
-                    POWER_EN = 0;//关闭电源
-                    DelayMs(500);
-                    PLATEN_DIR = 0;//释放方向继电器
+                    hd_count1 = 0;
+                    MotoOff(0);
                     //自动程序
                     if(autu_flag == 2) {
                         autu_flag = 3;
                     }
                 }
-            } else {
-                hd_count = 0;
             }
         }
     }
     //切纸电机以打开
     if(moto2.en == 1) {
-        if(moto2.dir == 0) {
+        if(moto2.dir == ste_dr_pla_counter) {//动作-收回刀--只有手动才能用
+            static u8 open_flag = 0;
+            static u8 open_van_out = 0;
+            static u8 open_van_in = 0;
             //切纸电机保护
-            
-            if(CUTTER_UP == 0) {
-                //关闭电机
-                moto2.en = 0;
-                //别忘了关闭继电器
-                POWER_EN = 0;//关闭电源
-                DelayMs(500);
-                CUTTER_DIR = 0;//释放方向继电器
-                if(autu_flag == 6) {
-                    autu_flag = 7;
+#if MOTO_PRP == 1
+            if(moto2.down_time < std_pla_down_pro_time) {
+                static u8 pla_down_count = 0;
+                if(pla_down_count < 10) {
+                    pla_down_count++;
+                } else {
+                    pla_down_count = 0;
+                    moto2.down_time++;
                 }
-                //复位
-                if(autu_flag == 20) {
-                    autu_flag = 21;
+            } else {
+                moto2.down_time = 0;
+                //关闭电机
+                MotoOff(1);
+            }
+#endif
+            if(CUTTER_UP == 0) {//当碰到这个信号了，肯定要停止 这个信号停止时不对的 
+                //关闭电机
+                MotoOff(1);
+//                if(autu_flag == 6) {
+//                    autu_flag = 7;
+//                }
+//                //复位
+//                if(autu_flag == 20) {
+//                    autu_flag = 21;
+//                }
+            }
+            if(CUTTER_DOWN == 1) {
+                if(open_flag == 0) {
+                    if(open_van_out < 200) {
+                        open_van_out++;
+                    } else {
+                        open_van_out = 0;
+                        open_flag= 1;
+                    }
+                } else {
+                    open_van_in = 0;//消抖
+                }
+            } else {
+                if(open_flag == 1) {
+                    if(open_van_in < 200) {
+                        open_van_in++;
+                    } else {
+                        open_van_in = 0;
+                        //信号到了
+                        open_flag = 2;
+                        //清楚信息
+                        moto2.close_time = 0;
+                    }
+                } else {
+                    open_van_out = 0;//消抖
                 }
             }
-        } else {
+            //关闭
+            if(open_flag == 2) {
+                if(moto2.close_time < 60000) {
+                    moto2.close_time++;
+                } else {
+                    moto2.close_time = 0;
+                    //关闭电机
+                    MotoOff(1);   
+                }
+            }
+        } else {//动作--下刀
             //切纸电机保护
-            
-            if(CUTTER_DOWN == 0) {
-                 //关闭电机
-                moto2.en = 0;
-                //别忘了关闭继电器
-                POWER_EN = 0;//关闭电源
-                DelayMs(500);
-                CUTTER_DIR = 0;//释放方向继电器
-                //自动程序
-                if(autu_flag == 4) {
-                    autu_flag = 5;
+#if MOTO_PRP == 1
+            if(moto2.up_time < std_pla_up_pro_time) {
+                static u8 pla_up_count = 0;
+                if(pla_up_count < 10) {
+                    pla_up_count++;
+                } else {
+                    pla_up_count = 0;
+                    moto2.up_time++;
+                }
+            } else {
+                moto2.up_time = 0;
+                MotoOff(1);
+            }
+#endif
+            //手动没有下刀一说
+//            if(CUTTER_DOWN == 0) {
+//                //关闭电机
+//                MotoOff(1);
+//                //自动程序
+//                if(autu_flag == 4) {
+//                    autu_flag = 5;
+//                }
+//                //手动切纸
+//                if(autu_flag == 31) {
+//                    autu_flag = 32;
+//                }
+//            }
+            //新的方式
+            static u8 close_flag = 0;
+            static u8 close_van_out = 0;
+            static u8 close_van_in = 0;
+            if(CUTTER_DOWN == 1) {
+                if(close_flag == 0) {
+                    if(close_van_out < 200) {
+                        close_van_out++;
+                    } else {
+                        close_van_out = 0;
+                        close_flag= 1;
+                    }
+                } else {
+                    close_van_in = 0;//消抖
+                }
+            } else {
+                if(close_flag == 1) {
+                    if(close_van_in < 200) {
+                        close_van_in++;
+                    } else {
+                        close_van_in = 0;
+                        //信号到了
+                        close_flag = 2;
+                        //清楚信息
+                        moto2.close_time = 0;
+                    }
+                } else {
+                    close_van_out = 0;//消抖
+                }
+            }
+            if(close_flag == 2) {
+                if(moto2.close_time < 60000) {
+                    moto2.close_time++;
+                } else {
+                    moto2.close_time = 0;
+                    //关闭电机
+                    MotoOff(1);
+                    //自动程序-修改在这里
+                    if(autu_flag == 4) {
+                        autu_flag = 5;
+                    }
+                    //手动切纸
+                    if(autu_flag == 31) {
+                        autu_flag = 32;
+                    }
                 }
             }
         }
@@ -420,9 +583,8 @@ void MotoServer(void) {
     //自动程序
     switch( autu_flag ) {
     case 1:
-        //切纸上限位
-        //压纸上限位
-        if( (CUTTER_UP == 0) && (PLATEN_UP == 0) ){
+        //先检测刀在不在位置  再接着检车压纸在不在位置 
+        if( (CUTTER_DOWN == 0) && (PLATEN_UP == 0) ){//( (CUTTER_UP == 0) && (PLATEN_UP == 0) ){//接近开关测试 现场调试修改
              //开始自动程序 先压纸
             MotoSet(0,10,1);
             autu_flag = 2;
@@ -450,7 +612,7 @@ void MotoServer(void) {
         break;
     case 5:
         //切纸完成,把刀收回
-        MotoSet(1,10,0);
+        //MotoSet(1,10,0); 刀已经收回了，不需要再收回
         autu_flag = 6;
         break;
     case 6:
@@ -465,8 +627,9 @@ void MotoServer(void) {
         if(MenuGetPushBook() == 0) {
             autu_flag = 0;//结束
         } else {
-            //推纸
-            MotoSteppingSetp(1,0);
+            //推纸stepping1.step
+            //MotoSteppingSetp(1,0);
+            MotoSteppingSetp(2,stepping1.step-1000);//只要推一点点出来就可以了
             autu_flag = 10;
         }
         break;
@@ -483,17 +646,32 @@ void MotoServer(void) {
             autu_flag = 22;//结束
         }
         break;
+    case 30://手动模式 切纸
+        if(CUTTER_UP == 0) {
+            //在位置切纸
+            MotoSet(1,10,1);
+            autu_flag = 31;
+        } else {
+            autu_flag = 32;
+        }
+        break;
+    case 32:
+        //不再位置复位
+        //MotoSet(1,10,0);刀已经收回，不需要再收刀
+        autu_flag = 0;
+        break;
+    case 40://退纸向上按钮 需要先检测
+        
+        break;
     default:
         break;
     }
-    
-
 }
 /**********************************************函数定义***************************************************** 
 * 函数名称: void MotoAuto(void) 
 * 输入参数: void 
 * 返回参数: void  
-* 功    能:   
+* 功    能： 
 * 作    者: by lhb_steven
 * 日    期: 2016/7/20
 ************************************************************************************************************/ 
@@ -502,6 +680,8 @@ void MotoAuto(u8 cmd) {
         autu_flag = 0;
         MotoOff(0);
         MotoOff(1);
+    } else if(cmd == 30) {
+        autu_flag = 30;
     } else {
         autu_flag = 1;
     } 
@@ -647,5 +827,12 @@ __interrupt void EXTI_PORTE_IRQHandler(void) {
     return;                    
 }
 
-
+#pragma vector=6
+__interrupt void EXTI_PORTB_IRQHandler(void) {
+    INTOFF
+    moto1.yazhi_jb++;
+    //PB_CR2_C22 = 0;
+    INTEN
+    return;                    
+}
 

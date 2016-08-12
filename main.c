@@ -20,10 +20,12 @@
 #include "Com.h"
 #include "buntu.h"
 #include "Menu.h"
-#include "Eeprom.h"
+#include "Eeprom.h"//1858  16001
+#include "Delay.h"
 
 int main( void ) {
     SysInit();
+    DelayMs(100);
     EeepromInit();
     MotoInit();
     ComInit();

@@ -20,7 +20,7 @@
 
 #include "Type.h"
 
-typedef struct {
+typedef struct {//测试节省内存
     u8   bit0:1;
     u8   bit1:1;
     u8   bit2:1;
@@ -31,8 +31,18 @@ typedef struct {
     u8   bit7:1;
 }bitu8;
 
+#define MOTO_PRP 0 //是否开启时间保护 0:关闭 1:开启
+
 typedef enum {
-    ste_best_arrive = 47700,
+    ste_best_arrive = 47000,//不经电机最大步数
+    ste_dr_cut_positive = 0,//切纸电机正传 1
+    ste_dr_cut_counter = 1,//切纸电机反转 0
+    ste_dr_pla_positive = 0,//压纸电机正传 1
+    ste_dr_pla_counter = 1,//压纸电机反转 0
+    std_cut_up_pro_time = 60000,//切纸电机正传保护时间
+    std_cut_down_pro_time = 60000,//切纸电机正传保护时间
+    std_pla_up_pro_time = 60000,//压纸电机正传保护时间
+    std_pla_down_pro_time = 60000,//压纸电机正传保护时间
 }stepping_parameter;   
 
 /*电机参数*/
@@ -45,6 +55,10 @@ typedef struct moto{
     u8 dir;//电机方向
     u8 sleep_set;//电机速度设置，即力度 10-90 九档
     u8 sleep_set_group;//电机速度档位-1-9
+    u16 up_time;//正传保护时间
+    u16 down_time;//反转保护时间
+    u16 yazhi_jb;//压纸电机
+    u16 close_time;//多久开始停止
 }moto;
 /*步进电机参数*/
 typedef struct stepping{
@@ -57,6 +71,7 @@ typedef struct stepping{
     u8 step_count;//加速度
     u8 arrive_en;//是否在走位置模式
     u16 arrive_setp;//需要走到的位置
+    u8 start_zero;//需要走到位置
 }stepping;
 /**********************************************函数定义***************************************************** 
 * 函数名称: void MotoInit(void) 

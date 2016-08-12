@@ -66,7 +66,7 @@ u8 MenuGetMode(void) {
 * 作    者: by lhb_steven
 * 日    期: 2016/3/17
 ************************************************************************************************************/ 
-void MenuModeSet(u8 cmd) { 
+void MenuModeSet(u8 cmd) {
     switch( cmd ) {
         case 0x01://步进
             if(menu.mode == 0) {
@@ -109,7 +109,8 @@ void MenuModeSet(u8 cmd) {
             if(menu.mode == 0) {//自动模式
                 MotoAuto(1);//关闭自动模式
             } else if(menu.mode == 1) {//手动模式
-                MotoSet(1,10,0);
+                MotoAuto(30);
+                //MotoSet(1,10,0);
             } else {
                 
             }
@@ -118,12 +119,13 @@ void MenuModeSet(u8 cmd) {
             if(menu.mode == 0) {//自动模式
                 MotoAuto(0);//关闭自动模式
             } else if(menu.mode == 1) {//手动模式
-                MotoOff(1);
+                MotoAuto(0);
+                //MotoOff(1);
             } else {
                 
             }
         break;
-        case 0x31:
+        case 0x31://双向开关---向上--按下
             if(menu.mode == 0) {
                 
             } else if(menu.mode == 1) {
@@ -133,10 +135,10 @@ void MenuModeSet(u8 cmd) {
             }
             
         break;
-        case 0x32:
-            
+        case 0x32://双向开关---向上--松开
+            MotoOff(0);
         break;
-        case 0x41:
+        case 0x41://双向开关---向下--按下
             if(menu.mode == 0) {
                 
             } else if(menu.mode == 1) {
@@ -145,7 +147,7 @@ void MenuModeSet(u8 cmd) {
                 
             }
         break;
-        case 0x42:
+        case 0x42://双向开关---向下--松开
         
         break;
         default:
