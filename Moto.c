@@ -43,6 +43,7 @@
 
 #define SAFETY_LIGHT    PB_IDR_IDR5 //安全光幕
 
+#define MUSIC			PD_ODR_ODR4//蜂鸣器
 /*电机参数*/
 moto moto1;//压纸电机
 moto moto2;//切纸电机
@@ -50,6 +51,9 @@ moto moto2;//切纸电机
 stepping stepping1;
 /*自动标志位*/
 static u8 autu_flag = 0;
+/*老化模式标志位*/
+static u8 age_mode_flag = 0;//老化模式标志位  0：正常 1：处于老化模式
+music music1;//蜂鸣器
 /**********************************************函数定义***************************************************** 
 * 函数名称: void MotoInit(void) 
 * 输入参数: void 
@@ -141,19 +145,66 @@ void MotoInit(void) {
     EXTI_CR1 &= ~BIT(2);//开启PD口中断 1 0
 	EXTI_CR1 |= BIT(3);
     
+    //第一次初始化
+    if(EepromRead(9) != 0x55) {
+        EepromWrite(9,0x55);
+        EepromWrite(10,0x00);
+        EepromWrite(11,0x00);
+        //力度初始化
+        EepromWrite(12,0x04);
+        EepromWrite(13,0x04);
+        
+        EepromWrite(20,0x04);
+    }
     stepping1.step = EepromRead(10);
     stepping1.step |= (u16)(EepromRead(11) << 8);
     
     //电机参数初始化
-    moto1.sleep_set_group = 8;//4
+    moto1.sleep_set_group = EepromRead(12);//4
     moto1.sleep_set = moto1.sleep_set_group*10;
     moto1.sleep = moto1.sleep_set;
     
-    moto2.sleep_set_group = 8;//4
+    moto2.sleep_set_group = EepromRead(13);//4
     moto2.sleep_set = moto2.sleep_set_group*10;
     moto2.sleep = moto1.sleep_set;
     
+    //获取初始位置
+    moto2.cut_zero_time_l = EepromRead(20);
+    moto2.cut_zero_time = moto2.cut_zero_time_l*6666;
+    
     stepping1.start_zero = 0;//第一次开机
+}
+/**********************************************函数定义***************************************************** 
+* 函数名称: static void MotoSetDyn(u8 moto,u8 dyn) 
+* 输入参数: void 
+* 返回参数: void  
+* 功    能:   
+* 作    者: by lhb_steven
+* 日    期: 2016/8/15
+************************************************************************************************************/ 
+u8 MotoSetDyn(u8 moto,u8 dyn) {
+    if(dyn == 0) {
+        return 0x00;
+    } else if(dyn > 10) {
+        return 0x00;
+    }
+    if(moto == 0) {
+        moto1.sleep_set_group = dyn;//4
+        moto1.sleep_set = moto1.sleep_set_group*10;
+        moto1.sleep = moto1.sleep_set;
+        EepromWrite(12,dyn);
+    } else if(moto == 1){
+        moto2.sleep_set_group = dyn;//4
+        moto2.sleep_set = moto2.sleep_set_group*10;
+        moto2.sleep = moto1.sleep_set;
+        EepromWrite(13,dyn);
+    } else if(moto == 2){
+        //获取初始位置
+        moto2.cut_zero_time_l = EepromRead(20);
+        moto2.cut_zero_time = moto2.cut_zero_time_l*6666;
+        EepromWrite(20,dyn);
+    }
+    return 0x00;
 }
 /**********************************************函数定义***************************************************** 
 * 函数名称: static void MotoSaveStep(void) 
@@ -278,6 +329,26 @@ u8 MotoSet(u8 moto, u8 sleep, u8 dir) {
     return 0;
 }
 /**********************************************函数定义***************************************************** 
+* 函数名称: void MotoReset(void) 
+* 输入参数: void
+* 返回参数: void  
+* 功    能:   
+* 作    者: by lhb_steven
+* 日    期: 2016/8/15
+************************************************************************************************************/ 
+void MotoReset(void) {
+    //切纸电机不在位置
+    if(CUTTER_UP == 1) {
+        //收回切纸电机
+        MotoSet(1,10,1);
+    } 
+    //压纸电机不在位置
+    if(CUTTER_UP == 1) {
+        //收回压纸电机
+        MotoSet(0,10,1);
+    }
+}
+/**********************************************函数定义***************************************************** 
 * 函数名称: void MotoSetppingSet(u8 en, u8 dr,u8 set) 
 * 输入参数: u8 en, u8 dr,u8 set 
 * 返回参数: void  
@@ -342,6 +413,19 @@ void MotoSteppingSetp(u8 mode, u16 arrive) {
     }
 }
 /**********************************************函数定义***************************************************** 
+* 函数名称: void MusicSet(void) 
+* 输入参数: void 
+* 返回参数: void  
+* 功    能:   
+* 作    者: by lhb_steven
+* 日    期: 2016/8/12
+************************************************************************************************************/ 
+void MusicSet(void) {
+	music1.open = 1;//打开蜂鸣器
+	MUSIC = 1;//硬件蜂鸣器打开
+}
+
+/**********************************************函数定义***************************************************** 
 * 函数名称: void MotoServer(void) 
 * 输入参数: void 
 * 返回参数: void  
@@ -350,15 +434,28 @@ void MotoSteppingSetp(u8 mode, u16 arrive) {
 * 日    期: 2016/7/15
 ************************************************************************************************************/ 
 void MotoServer(void) {
+	//蜂鸣器服务函数
+	if(music1.open == 1) {
+		if(music1.time < 10000) {
+			music1.time++;
+		} else {
+			music1.time = 0;
+			MUSIC = 0;
+		}
+	}
     //安全光幕保护
     if(SAFETY_LIGHT == 0) {
         if(moto1.en == 1) {
             //关闭电机
             MotoOff(0);
+			//鸣叫提醒
+			MusicSet();
         }
         if(moto2.en == 1) {
             //关闭电机
             MotoOff(1);
+			//鸣叫提醒
+			MusicSet();
         }
     }
     //电机打开
@@ -374,10 +471,44 @@ void MotoServer(void) {
                 //推书完成，走到位置
                 if(stepping1.start_zero == 0) {
                     stepping1.start_zero = 1;//只有在开机的时候走一次
+					MusicSet();//复位完成 叫一下
                     MotoSteppingSetp(2,MenuGetArrive());
                 }
+				//回到零位，发送电机位置
+				ComSend(0x07,(u8)stepping1.step, (u8)(stepping1.step >> 8),0x00);//发送当前位置
             }
+#if MOTO_PRP == 1
+            if(stepping1.zero_time < mot_zero_time) {
+                static u8 cut_up_count = 0;
+                if(cut_up_count < 10) {
+                    cut_up_count++;
+                } else {
+                    cut_up_count = 0;
+                    stepping1.zero_time++;
+                }
+            } else {
+                stepping1.zero_time = 0;
+                //关闭电机
+                stepping1.en = 0;//关闭电机
+                stepping1.step = 0;//回到零点
+                MotoSaveStep();//保存
+                //发送错误
+                MusicSet();//发生错误，叫一声
+				ComSend(0x44,0x03,0x00,0x00,0x00);
+            }
+#endif
         }
+		//电机位置更新
+		{
+			static u16 setp_time = 0;
+			if(setp_time < 2000) {
+				setp_time++;
+			} else {
+				setp_time = 0;
+				//更新位置
+				ComSend(0x07,(u8)stepping1.step, (u8)(stepping1.step >> 8),0x00);//发送当前位置
+			}
+		}
     }
     //压纸电机以打开
     if(moto1.en == 1) {
@@ -397,7 +528,8 @@ void MotoServer(void) {
                 //关闭电机
                 MotoOff(0);
                 //发送错误
-                
+                MusicSet();//发生错误，叫一声
+				ComSend(0x44,0x01,0x00,0x00,0x00);
             }
 #endif
             //到位置了
@@ -410,10 +542,33 @@ void MotoServer(void) {
                 }
                 //收到
                 if(autu_flag == 22) {
-                    autu_flag = 0;
+                    if(age_mode_flag == 0) {//非老化模式结束
+                        autu_flag = 0;
+                    } else {//老化模式继续运行
+                        autu_flag = 1;
+                    }
                 }
             }
         } else {
+            //压纸电机保护
+#if MOTO_PRP == 1
+            if(moto1.down_time < std_cut_down_pro_time) {
+                static u8 cut_up_count = 0;
+                if(cut_up_count < 10) {
+                    cut_up_count++;
+                } else {
+                    cut_up_count = 0;
+                    moto1.down_time++;
+                }
+            } else {
+                moto1.up_time = 0;
+                //关闭电机
+                MotoOff(0);
+                //发送错误
+                MusicSet();//发生错误，叫一声
+				ComSend(0x44,0x02,0x01,0x00,0x00);
+            }
+#endif
             static u16 hd_count1 = 0;
             if(moto1.yazhi_jb > 1) {
                 moto1.yazhi_jb = 0;
@@ -453,6 +608,9 @@ void MotoServer(void) {
                 moto2.down_time = 0;
                 //关闭电机
                 MotoOff(1);
+                //发送错误
+                MusicSet();//发生错误，叫一声
+				ComSend(0x44,0x02,0x00,0x00,0x00);
             }
 #endif
             if(CUTTER_UP == 0) {//当碰到这个信号了，肯定要停止 这个信号停止时不对的 
@@ -494,7 +652,7 @@ void MotoServer(void) {
             }
             //关闭
             if(open_flag == 2) {
-                if(moto2.close_time < 60000) {
+                if(moto2.close_time < moto2.cut_zero_time) {
                     moto2.close_time++;
                 } else {
                     moto2.close_time = 0;
@@ -516,6 +674,9 @@ void MotoServer(void) {
             } else {
                 moto2.up_time = 0;
                 MotoOff(1);
+                //发送错误
+                MusicSet();//发生错误，叫一声
+				ComSend(0x44,0x02,0x00,0x00,0x00);
             }
 #endif
             //手动没有下刀一说
@@ -562,9 +723,13 @@ void MotoServer(void) {
                 }
             }
             if(close_flag == 2) {
-                if(moto2.close_time < 60000) {
+                if(moto2.close_time < moto2.cut_zero_time) {
                     moto2.close_time++;
                 } else {
+                    //切纸完成
+                    if(age_mode_flag == 0) {//老化模式不计数
+                        ComSend(0x03,0x00, 0x00,0x00);//发送切纸信号，计数
+                    }
                     moto2.close_time = 0;
                     //关闭电机
                     MotoOff(1);
@@ -584,7 +749,7 @@ void MotoServer(void) {
     switch( autu_flag ) {
     case 1:
         //先检测刀在不在位置  再接着检车压纸在不在位置 
-        if( (CUTTER_DOWN == 0) && (PLATEN_UP == 0) ){//( (CUTTER_UP == 0) && (PLATEN_UP == 0) ){//接近开关测试 现场调试修改
+        if( (CUTTER_UP == 0) && (PLATEN_UP == 0) ){//( (CUTTER_UP CUTTER_DOWN== 0) && (PLATEN_UP == 0) ){//接近开关测试 现场调试修改
              //开始自动程序 先压纸
             MotoSet(0,10,1);
             autu_flag = 2;
@@ -623,14 +788,22 @@ void MotoServer(void) {
         autu_flag = 8;
         break;
     case 9:
-        //压纸已经收回，推书
-        if(MenuGetPushBook() == 0) {
-            autu_flag = 0;//结束
+        if(stepping1.divide_sec == 2) {//等分模式
+            autu_flag = 40;//继续等分
         } else {
-            //推纸stepping1.step
-            //MotoSteppingSetp(1,0);
-            MotoSteppingSetp(2,stepping1.step-1000);//只要推一点点出来就可以了
-            autu_flag = 10;
+            if(age_mode_flag == 0) {//普通模式正常运行
+                //压纸已经收回，推书
+                if(MenuGetPushBook() == 0) {
+                    autu_flag = 0;//结束
+                } else {
+                    //推纸stepping1.step
+                    //MotoSteppingSetp(1,0);
+                    MotoSteppingSetp(2,stepping1.step-1000);//只要推一点点出来就可以了
+                    autu_flag = 10;
+                }
+            } else {//老化模式继续运行
+                autu_flag = 1;
+            }
         }
         break;
     case 11:
@@ -660,11 +833,54 @@ void MotoServer(void) {
         //MotoSet(1,10,0);刀已经收回，不需要再收刀
         autu_flag = 0;
         break;
-    case 40://退纸向上按钮 需要先检测
-        
+    case 40://等分模式        退纸向上按钮 需要先检测
+        if(stepping1.divide_sec == 1) {
+            if(stepping1.divide_num > 0) {
+                MotoSteppingSetp(2,stepping1.divide_step*stepping1.divide_num);//第一次的位置
+                stepping1.divide_num--;
+                stepping1.divide_sec = 2;
+                autu_flag = 41;//把书推出来就结束了
+            } else {
+                stepping1.divide_sec = 0;
+                autu_flag = 9;//把书推出来就结束了
+            }
+        } else {
+            if(stepping1.divide_num > 0) {
+                MotoSteppingSetp(2,stepping1.divide_step*stepping1.divide_num);//第一次的位置
+                stepping1.divide_num--;
+                stepping1.divide_sec = 2;
+                autu_flag = 41;//把书推出来就结束了
+            } else {
+                stepping1.divide_sec = 0;
+                autu_flag = 9;//把书推出来就结束了
+            }
+        }
+        break;
+    case 42://推书完成 --开始切纸
+        autu_flag = 1;//去切纸
         break;
     default:
         break;
+    }
+}
+/**********************************************函数定义***************************************************** 
+* 函数名称: void MotoAgeTest(void) 
+* 输入参数: void 
+* 返回参数: void  
+* 功    能：0 关闭老化模式 1：开始老化模式
+* 作    者: by lhb_steven
+* 日    期: 2016/8/20
+************************************************************************************************************/ 
+void MotoAgeTest(u8 cmd) {
+    if(cmd == 0) {
+        age_mode_flag = 0;
+        autu_flag = 0;
+        
+    } else {
+        age_mode_flag = 1;
+        autu_flag = 1;
+        MotoOff(0);
+        MotoOff(1);
     }
 }
 /**********************************************函数定义***************************************************** 
@@ -682,10 +898,28 @@ void MotoAuto(u8 cmd) {
         MotoOff(1);
     } else if(cmd == 30) {
         autu_flag = 30;
+    } else if(cmd == 40) {
+        autu_flag = 40;
     } else {
         autu_flag = 1;
     } 
 }
+/**********************************************函数定义***************************************************** 
+* 函数名称: void MotoDivideSet(void) 
+* 输入参数: void 
+* 返回参数: void  
+* 功    能： 
+* 作    者: by lhb_steven
+* 日    期: 2016/8/20
+************************************************************************************************************/ 
+void MotoDivideSet(u8 num, u16 setp) {
+    stepping1.divide_sec = 1;//第一次进入
+    stepping1.divide_num = num;//设置需要走的次数
+    stepping1.arrive_setp = setp;//设置需要走的距离
+}
+/*
+	定时器中断，处理
+*/
 #pragma vector=0xD
 __interrupt void TIM1_UPD_OVF_TRG_BRK_IRQHandler(void) {
     INTOFF
@@ -773,8 +1007,10 @@ __interrupt void TIM1_UPD_OVF_TRG_BRK_IRQHandler(void) {
                         stepping1.en = 0;//关闭电机
                         MotoSaveStep();//保存
                         //自动模式 推书完成
-                        if(autu_flag == 10) {
+                        if(autu_flag == 10) {//推纸
                             autu_flag = 11;
+                        } else if(autu_flag == 41) {//等分模式
+                            autu_flag = 42;
                         }
                     }
                 } else {
