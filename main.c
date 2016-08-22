@@ -31,7 +31,7 @@ int main( void ) {
     ComInit();
     BuntuInit();
     MenuInit();
-    MotoSteppingSetp(0,1);//上电复位
+    MotoSteppingSetp(0,1);//上电复位  需要回到原来的位置
     INTEN
     while(1) {
         MenuModeSet(BuntuRead());
