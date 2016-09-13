@@ -21,20 +21,12 @@
 #include "Moto.h"
 #include "Eeprom.h"
 
-typedef struct DataNode
-{
-    u8 mode;//当前模式 0：自动模式 1：手动模式 2：差分模式  20
-    u8 push_book;  //21
-    u16 ste_arrive;//推书位置 22 23
-    u8 dibide_num;
-    u16 divide_setp;
-} tDataNode;
 /***********************************************变量声明*****************************************************
 * 功    能: caidan  
 * 作    者: by lhb_steven
 * 日    期: 2016/3/17
 ************************************************************************************************************/ 
-static tDataNode menu;
+ tDataNode menu;
 /**********************************************函数定义***************************************************** 
 * 函数名称: void MenuInit(void) 
 * 输入参数: void 
@@ -137,7 +129,7 @@ void MenuModeSet(u8 cmd) {
             if(menu.mode == 0) {//自动模式
                 
             } else if(menu.mode == 1) {
-                MotoSet(0,10,0);
+                MotoSet(0,10,1);
             } else if(menu.mode == 2){
                 
             }

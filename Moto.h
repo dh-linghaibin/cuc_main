@@ -31,7 +31,7 @@ typedef struct {//测试节省内存
     u8   bit7:1;
 }bitu8;
 
-#define MOTO_PRP 0 //是否开启时间保护 0:关闭 1:开启
+#define MOTO_PRP 1 //是否开启时间保护 0:关闭 1:开启
 
 typedef enum {
     ste_best_arrive = 47000,//不经电机最大步数
@@ -39,10 +39,10 @@ typedef enum {
     ste_dr_cut_counter = 1,//切纸电机反转 0
     ste_dr_pla_positive = 0,//压纸电机正传 1
     ste_dr_pla_counter = 1,//压纸电机反转 0
-    std_cut_up_pro_time = 60000,//切纸电机正传保护时间
-    std_cut_down_pro_time = 60000,//切纸电机正传保护时间
-    std_pla_up_pro_time = 60000,//压纸电机正传保护时间
-    std_pla_down_pro_time = 60000,//压纸电机正传保护时间
+    std_cut_up_pro_time = 10000,//切纸电机正传保护时间
+    std_cut_down_pro_time = 10000,//切纸电机正传保护时间
+    std_pla_up_pro_time = 10000,//压纸电机正传保护时间
+    std_pla_down_pro_time = 10000,//压纸电机正传保护时间
 	mot_zero_time = 60000,//步进电机慧琳
 	
 	//参数
@@ -65,6 +65,8 @@ typedef struct moto{
     
     u8 cut_zero_time_l;//切纸点击力度设置
     u16 cut_zero_time;//切纸电机时间设置
+    
+    u8 cut_down_flag;//切纸停止
 }moto;
 /*步进电机参数*/
 typedef struct stepping{
@@ -82,6 +84,7 @@ typedef struct stepping{
     
     u8 divide_sec;//第一次进入
     u8 divide_num;//需要走几次
+    u8 divide_num_s;//已经走了几次
     u16 divide_step;//每次需要走的位置
 }stepping;
 /*蜂鸣器参数设置*/

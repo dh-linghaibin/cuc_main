@@ -90,7 +90,7 @@ u8 BuntuRead(void) {
         but_out_pa = 0;
     }
     
-    if(BUT_IN_PA == 1) {//出纸开关
+    if(BUT_IN_PA == 0) {//出纸开关
         if(but_in_pa < 6000) {
             but_in_pa++;
             if(but_in_pa == 5999) {
