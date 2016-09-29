@@ -38,27 +38,27 @@
 ************************************************************************************************************/ 
 void BuntuInit(void) { 
     PA_DDR_DDR1 = 0;//出纸-步进
-    PA_CR1_C11 = 0;
+    PA_CR1_C11 = 1;
     PA_CR2_C21 = 0;
     
     PA_DDR_DDR2 = 0;//进纸-步进
-    PA_CR1_C12 = 0;
+    PA_CR1_C12 = 1;
     PA_CR2_C22 = 0;
     
     PB_DDR_DDR6 = 0;//切纸按钮1
-    PB_CR1_C16 = 0;
+    PB_CR1_C16 = 1;
     PB_CR2_C26 = 0;
     
     PB_DDR_DDR7 = 0;//切纸按钮2
-    PB_CR1_C17 = 0;
+    PB_CR1_C17 = 1;
     PB_CR2_C27 = 0;
     
     PA_DDR_DDR3 = 0;//松开压纸
-    PA_CR1_C13 = 0;
+    PA_CR1_C13 = 1;
     PA_CR2_C23 = 0;
     
     PF_DDR_DDR4 = 0;//压纸
-    PF_CR1_C14 = 0;
+    PF_CR1_C14 = 1;
     PF_CR2_C24 = 0;
 }
 /**********************************************函数定义***************************************************** 
@@ -114,14 +114,14 @@ u8 BuntuRead(void) {
                 }
             }
         } else {
-            if(but_cutter > 5999) {
+            if(but_cutter > 4999) {
                 but_cutter = 0;
                 return 0x22;
             }
             but_cutter = 0;
         }
     } else {
-        if(but_cutter > 5999) {
+        if(but_cutter > 4999) {
             but_cutter = 0;
             return 0x22;
         }
@@ -136,7 +136,7 @@ u8 BuntuRead(void) {
             }
         }
     } else {
-        if(but_platen_in > 5999) {
+        if(but_platen_in > 4999) {
             but_platen_in = 0;
             return 0x32;
         }

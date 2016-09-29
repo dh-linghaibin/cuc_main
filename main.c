@@ -25,13 +25,13 @@
 
 int main( void ) {
     SysInit();
-    DelayMs(100);
     EeepromInit();
     MotoInit();
     ComInit();
     BuntuInit();
     MenuInit();
-    MotoSteppingSetp(0,1);//上电复位  需要回到原来的位置
+    DelayMs(100);
+    //MotoSetppingSet(3,0,0);
     INTEN
     while(1) {
         MenuModeSet(BuntuRead());
@@ -39,5 +39,7 @@ int main( void ) {
         MotoServer();
         //通讯服务函数
         MenuAsk();
+        //自动服务
+        MenuAutuSer();
     }
 }

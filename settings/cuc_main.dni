@@ -1,5 +1,3 @@
-[DebugChecksum]
-Checksum=-787286947
 [Stack]
 FillEnabled=0
 OverflowWarningsEnabled=1
@@ -10,25 +8,20 @@ UseTrigger=1
 TriggerName=main
 LimitSize=0
 ByteLimit=50
+[DebugChecksum]
+Checksum=1240139791
 [CallStack]
 ShowArgs=0
 [Disassembly]
 MixedMode=1
 [struct_types]
-Fmt0=moto-dir	3	0
-Fmt1=moto-en	3	0
-Fmt2=moto-sleep_start	3	0
-Fmt3=stepping-divide_num	3	0
-Fmt4=stepping-divide_sec	3	0
-Fmt5=stepping-start_zero	3	0
+Fmt0=autu-specal_sui	3	0
+Fmt1=autu-sui_cut_num	3	0
+Fmt2=autu-sui_cut_num_last	3	0
+Fmt3=stepping-setp	4	0
+Fmt4=stepping-sleep	3	0
 [array_types]
 Fmt0=u8[8]	4	0
-[watch_formats]
-Fmt0={W}42:age_mode_num	4	0
-Fmt1={W}42:autu_flag	3	0
-Fmt2={W}42:menu.mode	3	0
-Fmt3={W}42:stepping1.divide_num	3	0
-Fmt4={W}42:stepping1.divide_sec	3	0
 [DataSample]
 LogEnabled=0
 GraphEnabled=0

@@ -35,11 +35,16 @@
 * 作    者: by lhb_steven
 * 日    期: 2016/3/17
 ************************************************************************************************************/ 
-void MenuInit(void) { 
+void MenuInit(void) {
+    u8 test = 0x00;
+    test = EepromRead(40);
+    if(test > 100) {
+        //while(1);
+    } else {
+        test++;
+        EepromWrite(40,test);
+    }
     menu.mode = EepromRead(20);
-    menu.push_book = EepromRead(21);
-    menu.ste_arrive = EepromRead(22);
-    menu.ste_arrive |= (u16)(EepromRead(23) << 8);
 }
 /**********************************************函数定义***************************************************** 
 * 函数名称: u8 MenuGetMode(void) 
@@ -63,93 +68,199 @@ u8 MenuGetMode(void) {
 void MenuModeSet(u8 cmd) {
     switch( cmd ) {
         case 0x01://步进按钮左按下
-            if(menu.mode == 0) {//自动模式
-                MotoSteppingSetp(1,1);//上电复位
-            } else if(menu.mode == 1) {
-                MotoSetppingSet(1,0,1);
-            } else if(menu.mode == 2){
-                
-            } else if(menu.mode == 4) {
-                //进入老化模式
-                MotoAgeTest(1);
+            MotoSetppingSet(1,0,0);
+            switch( menu.mode ) {
+            case 0://自动模式
+                break;
+            case 1://手动模式
+                break;
+            case 2://等分模式
+                break;
+            case 3:
+                break;
+            case 4://进入老化模式
+                break;
+            case 5:
+                break;
+            default:
+                break;
             }
         break;
         case 0x02://步进按钮松开
-            if(menu.mode == 0) {//自动模式
-                
-            } else if(menu.mode == 1) {
-                MotoSetppingSet(0,0,1);
-            } else if(menu.mode == 2){
-                
+            MotoSetppingSet(0,0,0);
+            switch( menu.mode ) {
+            case 0://自动模式
+                break;
+            case 1://手动模式
+                break;
+            case 2://等分模式
+                break;
+            case 3:
+                break;
+            case 4://进入老化模式
+                break;
+            case 5:
+                break;
+            default:
+                break;
             }
         break;
         case 0x11://步进按钮右按下
-            if(menu.mode == 0) {//自动模式
-                MotoSteppingSetp(2,menu.ste_arrive);//上电复位
-            } else if(menu.mode == 1) {
-                MotoSetppingSet(1,1,1);
-            } else if(menu.mode == 2){
-                
-            } else if(menu.mode == 4) {
-                //推出老化模式
-                MotoAgeTest(0);
+            MotoSetppingSet(1,1,0);
+            switch( menu.mode ) {
+            case 0://自动模式
+                break;
+            case 1://手动模式
+                break;
+            case 2://等分模式
+                break;
+            case 3:
+                break;
+            case 4://进入老化模式
+                break;
+            case 5:
+                break;
+            default:
+                break;
             }
         break;
-        case 0x12:
-            if(menu.mode == 0) {//自动模式
-
-            } else if(menu.mode == 1) {
-                MotoSetppingSet(0,1,1);
-            } else if(menu.mode == 2){
-                
+        case 0x12://步进按钮右松开
+            MotoSetppingSet(0,1,0);
+            switch( menu.mode ) {
+            case 0://自动模式
+                break;
+            case 1://手动模式
+                break;
+            case 2://等分模式
+                break;
+            case 3:
+                break;
+            case 4://进入老化模式
+                break;
+            case 5:
+                break;
+            default:
+                break;
             }
         break;
-        case 0x21://切纸电机MotoAuto(0);//关闭自动模式
-            if(menu.mode == 0) {//自动模式
-                MotoAuto(1);//关闭自动模式
-            } else if(menu.mode == 1) {//手动模式
-                MotoAuto(30);
-                //MotoSet(1,10,0);
-            } else if(menu.mode == 2){//等分模式
-                MotoDivideSet(menu.dibide_num,menu.divide_setp);
-                MotoAuto(40);
+        case 0x21://切纸按奶按下
+            switch( menu.mode ) {
+            case 0://自动模式
+                MenuAutoSet(1);
+                break;
+            case 1://手动模式
+                MotoOpen(1,1);//切纸
+                break;
+            case 2://等分模式
+                MenuAutuSui(1);
+                break;
+            case 3:
+                break;
+            case 4://进入老化模式
+                break;
+            case 5:
+                break;
+            default:
+                break;
             }
+            
         break;
         case 0x22://切纸电机关闭
-            if(menu.mode == 0) {//自动模式
-                MotoAuto(0);//关闭自动模式
-            } else if(menu.mode == 1) {//手动模式
-                MotoAuto(0);
-                //MotoOff(1);
-            } else if(menu.mode == 2){//等分模式
-                MotoAuto(0);
+            switch( menu.mode ) {
+            case 0://自动模式
+                MenuAutoSet(0);
+                break;
+            case 1://手动模式
+                MotoOff(1);//关闭切纸纸电机
+                break;
+            case 2://等分模式
+                MenuAutuSui(0);
+                break;
+            case 3:
+                break;
+            case 4://进入老化模式
+                break;
+            case 5:
+                break;
+            default:
+                break;
             }
+            
         break;
         case 0x31://双向开关---向上--按下
-            if(menu.mode == 0) {//自动模式
-                
-            } else if(menu.mode == 1) {
-                MotoSet(0,10,1);
-            } else if(menu.mode == 2){
-                
+            switch( menu.mode ) {
+            case 0://自动模式
+                break;
+            case 1://手动模式
+                MotoOpen(0,0);//压纸
+                break;
+            case 2://等分模式
+                break;
+            case 3:
+                break;
+            case 4://进入老化模式
+                break;
+            case 5:
+                break;
+            default:
+                break;
             }
-            
         break;
         case 0x32://双向开关---向上--松开
-            MotoOff(0);
-        break;
-        case 0x41://双向开关---向下--按下
-            if(menu.mode == 0) {//自动模式
-                
-            } else if(menu.mode == 1) {
-                //MotoSet(0,10,1);
-                MotoReset();//复位
-            } else if(menu.mode == 2){
-                
+            switch( menu.mode ) {
+            case 0://自动模式
+                break;
+            case 1://手动模式
+                MotoOff(0);//关闭压纸纸电机
+                break;
+            case 2://等分模式
+                break;
+            case 3:
+                break;
+            case 4://进入老化模式
+                break;
+            case 5:
+                break;
+            default:
+                break;
             }
         break;
+        case 0x41://双向开关---向下--按下
+            switch( menu.mode ) {
+            case 0://自动模式
+                break;
+            case 1://手动模式
+                break;
+            case 2://等分模式
+                break;
+            case 3:
+                break;
+            case 4://进入老化模式
+                break;
+            case 5:
+                break;
+            default:
+                break;
+            }
+            MotoReset();//刀，压纸 复位
+        break;
         case 0x42://双向开关---向下--松开
-            
+            switch( menu.mode ) {
+            case 0://自动模式
+                break;
+            case 1://手动模式
+                break;
+            case 2://等分模式
+                break;
+            case 3:
+                break;
+            case 4://进入老化模式
+                break;
+            case 5:
+                break;
+            default:
+                break;
+            }
         break;
         default:
         break;
@@ -168,83 +279,60 @@ void MenuAsk(void) {
         ComSetFlag(0x00);
         switch( ComGetDate(1) ) {
         case 0x01://推书
-            MotoSteppingSetp(2,menu.ste_arrive);
+            //MotoSteppingSetp(2,menu.ste_arrive);
+            menu.ste_arrive = ComGetDate(2);
+            menu.ste_arrive |= (u16)(ComGetDate(3) << 8);
+            MotoSetppingSet(2,0,menu.ste_arrive);
             break;
-        case 0x02://压纸
-            MotoSet(0,10,1);
-            break;
-        case 0x03://切纸
-            MotoSet(1,10,0);
-            break;
-        case 0x04://发送当前模式
+        case 0x02://模式设置
             menu.mode = ComGetDate(2);
-            menu.push_book = 0;//不需要自动
-            menu.ste_arrive = ComGetDate(3);
-            menu.ste_arrive |= (u16)(ComGetDate(4) << 8);
             EepromWrite(20,menu.mode);
-            EepromWrite(21,0x00);
-            EepromWrite(22,ComGetDate(3));
-            EepromWrite(23,ComGetDate(4));
             break;
-        case 0x05://是否需要推纸
-            menu.mode = ComGetDate(2);
-            menu.push_book = 1;//需要自动
-            menu.ste_arrive = ComGetDate(3);
-            menu.ste_arrive |= (u16)(ComGetDate(4) << 8);
-            EepromWrite(20,menu.mode);
-            EepromWrite(21,0x001);
-            EepromWrite(22,ComGetDate(3));
-            EepromWrite(23,ComGetDate(4));
+        case 0x03://是否需要推书
+            MotoAutuPushBook(ComGetDate(2));
             break;
-		case 0x08://压纸电机力度设置
-            MotoSetDyn(0,ComGetDate(2));
-            MotoSetDyn(1,ComGetDate(2));
-			break;
-		case 0x09://切纸电机力度设置
-			MotoSetDyn(1,ComGetDate(2));
-			break;
-		case 0xa0://刀位置微调
-			MotoSetDyn(2,ComGetDate(2));
-			break;
-        case 0xa1://老化模式
-            if(ComGetDate(2) == 0x00) {//老化模式1
-                menu.mode = 0;//推出老化模式
-            } else if(ComGetDate(2) == 1) {//老化模式2
-                menu.mode = 4;//进入老化模式
+        case 0x04://推纸步进电机复位
+            MotoSetppingSet(3,0,0);//电机校准
+            break;
+        case 0x05://等分数据
+            switch( ComGetDate(2) ) {
+            case 0://书本长度
+                menu.ste_arrive = ComGetDate(3);
+                menu.ste_arrive |= (u16)(ComGetDate(4) << 8);
+                MotoDivideSet(0,menu.ste_arrive);
+                break;
+            case 1://裁切长度
+                menu.ste_arrive = ComGetDate(3);
+                menu.ste_arrive |= (u16)(ComGetDate(4) << 8);
+                MotoDivideSet(1,menu.ste_arrive);
+                break;
+            case 2://裁切几段
+                menu.ste_arrive = ComGetDate(3);
+                MotoDivideSet(2,menu.ste_arrive);
+                break;
+            default:
+                break;
             }
+            
             break;
-        case 0xb0://等分模式
-            menu.divide_setp = ComGetDate(3);
-            menu.divide_setp |= (u16)(ComGetDate(4) << 8);
-            menu.dibide_num = ComGetDate(2);
-            MotoDivideSet(menu.dibide_num,menu.divide_setp);
-            menu.mode = 2;//等分模式
+		case 0x07://老化模式
+            MotoOldMode(ComGetDate(2),ComGetDate(3));
+			break;
+		case 0x08://压纸电机力度设置
+            MotoSetStrength(ComGetDate(2));
+			break;
+		case 0xa0:
+
+			break;
+        case 0xa1:
+
+            break;
+        case 0xb0:
+
         default:
             break;
         }
     }
-}
-/**********************************************函数定义***************************************************** 
-* 函数名称: u8 MenuGetPushBook(void) 
-* 输入参数: void 
-* 返回参数: u8  
-* 功    能:   
-* 作    者: by lhb_steven
-* 日    期: 2016/7/20
-************************************************************************************************************/ 
-u8 MenuGetPushBook(void) { 
-    return menu.push_book;
-}
-/**********************************************函数定义***************************************************** 
-* 函数名称: u16 MenuGetArrive(void) 
-* 输入参数: void 
-* 返回参数: u16  
-* 功    能:   
-* 作    者: by lhb_steven
-* 日    期: 2016/7/20
-************************************************************************************************************/ 
-u16 MenuGetArrive(void) { 
-    return menu.ste_arrive;
 }
 
 
